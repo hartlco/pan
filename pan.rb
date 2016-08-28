@@ -11,7 +11,7 @@ class Pan < Sinatra::Base
         username == yaml_config["username"] and password == yaml_config["password"]
     end
 
-    get '/:script' do
+    post '/:script' do
         script_name = params['script']
         script_path = "./scripts/#{script_name}"
 
