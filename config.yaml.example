@@ -1,2 +1,4 @@
 username: <username>
 password: <password>
+uploadPath: <uploadPath>
+sharePath: <sharePath>

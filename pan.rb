@@ -6,7 +6,7 @@ class Pan < Sinatra::Base
 
     log = Logger.new("#{File.dirname(__FILE__)}/log.log")
     yaml_config = YAML.load_file('config.yaml')
-
+    
     use Rack::Auth::Basic, "Restricted Area" do |username, password|
         username == yaml_config["username"] and password == yaml_config["password"]
     end
@@ -24,5 +24,18 @@ class Pan < Sinatra::Base
         run_output = %x( #{script_path} )
         log.info run_output
         return 200
+    end
+    
+    post '/upload/media' do
+      @filename = params[:file][:filename]
+        file = params[:file][:tempfile]
+
+		uploadPath = yaml_config['uploadPath']
+        File.open("#{uploadPath}/#{@filename}", 'wb') do |f|
+          f.write(file.read)
+        end
+      
+      	sharePath = yaml_config["sharePath"]
+        response.headers["Location"] = "#{sharePath}/#{@filename}"
     end
 end
