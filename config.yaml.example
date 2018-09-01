@@ -2,3 +2,5 @@ username: <username>
 password: <password>
 uploadPath: <uploadPath>
 sharePath: <sharePath>
+authorization: <authToken>
+githubtoken: <repopath>
