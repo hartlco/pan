@@ -4,6 +4,7 @@ require 'yaml'
 require 'net/http'
 require "base64"
 require 'octokit'
+require 'json'
 
 class Pan < Sinatra::Base
     log = Logger.new("#{File.dirname(__FILE__)}/log.log")
@@ -35,6 +36,11 @@ class Pan < Sinatra::Base
       
       	sharePath = yaml_config["sharePath"]
         response.headers["Location"] = "#{sharePath}/#{@filename}"
+    end
+
+    get '/micropub/main' do
+      content_type :json
+      { "media-endpoint": yaml_config["endpointURL"]}.to_json
     end
     
     post '/micropub/main' do
