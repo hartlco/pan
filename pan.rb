@@ -5,6 +5,8 @@ require 'net/http'
 require "base64"
 require 'octokit'
 require 'json'
+require 'net/http'
+require 'net/https'
 
 class Pan < Sinatra::Base
     log = Logger.new("#{File.dirname(__FILE__)}/log.log")
@@ -42,10 +44,36 @@ class Pan < Sinatra::Base
       content_type :json
       { "media-endpoint": yaml_config["endpointURL"]}.to_json
     end
+
+    def checkAuthorization(token)
+      uri = URI('https://tokens.indieauth.com/token')
+
+      # Create client
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    
+      # Create Request
+      req =  Net::HTTP::Get.new(uri)
+      # Add headers
+      authorizationValue = "#{token}"
+
+      req.add_field "Authorization", authorizationValue
+    
+      # Fetch Request
+      res = http.request(req)
+      body = res.body
+
+      decodedBody = URI.decode_www_form(body)
+      correctMeURI = decodedBody.assoc('me').last == 'https://hartl.co/'
+      puts correctMeURI
+
+      return (res.code == '200' and correctMeURI)
+    end
     
     post '/micropub/main' do
       headerToken = request.env["HTTP_AUTHORIZATION"]
-      if headerToken != "Bearer #{yaml_config["authorization"]}"
+      if !checkAuthorization(request.env["HTTP_AUTHORIZATION"])
         puts headerToken
         puts "Wrong token"
         return 401
@@ -67,5 +95,5 @@ class Pan < Sinatra::Base
         filecontent)
       
       print "success"
-    end
+    end  
 end
