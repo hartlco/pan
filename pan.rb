@@ -64,11 +64,14 @@ class Pan < Sinatra::Base
       res = http.request(req)
       body = res.body
 
+      if res.code != '200'
+        return false
+      end
+
       decodedBody = URI.decode_www_form(body)
       correctMeURI = decodedBody.assoc('me').last == 'https://hartl.co/'
-      puts correctMeURI
 
-      return (res.code == '200' and correctMeURI)
+      return correctMeURI
     end
     
     post '/micropub/main' do
