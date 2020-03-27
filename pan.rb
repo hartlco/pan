@@ -7,42 +7,38 @@ require 'octokit'
 require 'json'
 require 'net/http'
 require 'net/https'
+require 'base64'
 
 class Pan < Sinatra::Base
     log = Logger.new("#{File.dirname(__FILE__)}/log.log")
     yaml_config = YAML.load_file('config.yaml')
-
-    post '/:script' do
-        script_name = params['script']
-        script_path = "./scripts/#{script_name}"
-
-        if !File.file?(script_path)
-            log.info "Script '#{script_name} does not exist'"
-            return 404
-        end
-
-        log.info "Run script '#{script_name}'"
-        run_output = %x( #{script_path} )
-        log.info run_output
-        return 200
-    end
     
     post '/upload/media' do
       @filename = params[:file][:filename]
         file = params[:file][:tempfile]
 
+        data = file.read
+
 		    uploadPath = yaml_config['uploadPath']
-        File.open("#{uploadPath}/#{@filename}", 'wb') do |f|
-          f.write(file.read)
-        end
+        
+        token = ENV["GITHUB_ACCESS_TOKEN"]
+        path = "#{ENV["IMAGE_PATH"]}/#{@filename}"
+        client = Octokit::Client.new(:access_token => token)
+        commitResource = client.create_contents(
+          ENV["GITHUB_REPOSITORY_NAME"],
+          path,
+          "Adding post",
+          data
+        )
       
-      	sharePath = yaml_config["sharePath"]
-        response.headers["Location"] = "#{sharePath}/#{@filename}"
+
+        downloadURL = commitResource.to_hash[:content][:download_url]
+        response.headers["Location"] = downloadURL
     end
 
     get '/micropub/main' do
       content_type :json
-      { "media-endpoint": yaml_config["endpointURL"]}.to_json
+      { "media-endpoint": ENV["MEDIAENDPOINT_URL"]}.to_json
     end
 
     def checkAuthorization(token)
@@ -89,7 +85,7 @@ class Pan < Sinatra::Base
       file = Time.now.strftime("%Y-%m-%d-%H-%M")
       date = Time.now.strftime("%Y-%m-%d %H:%M")
       filecontent = "---\nauthor: Martin Hartl\nlayout: status\ndate: #{date}\n---\n#{content}"
-      token = yaml_config["githubtoken"]
+      token = ENV["GITHUB_ACCESS_TOKEN"]
 
       client = Octokit::Client.new(:access_token => token)
       client.create_contents("hartlco/hartlco-jekyll",
