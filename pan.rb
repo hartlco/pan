@@ -11,15 +11,12 @@ require 'base64'
 
 class Pan < Sinatra::Base
     log = Logger.new("#{File.dirname(__FILE__)}/log.log")
-    yaml_config = YAML.load_file('config.yaml')
     
     post '/upload/media' do
       @filename = params[:file][:filename]
         file = params[:file][:tempfile]
 
         data = file.read
-
-		    uploadPath = yaml_config['uploadPath']
         
         token = ENV["GITHUB_ACCESS_TOKEN"]
         path = "#{ENV["IMAGE_PATH"]}/#{@filename}"
@@ -27,10 +24,9 @@ class Pan < Sinatra::Base
         commitResource = client.create_contents(
           ENV["GITHUB_REPOSITORY_NAME"],
           path,
-          "Adding post",
+          "Adding asset",
           data
         )
-      
 
         downloadURL = commitResource.to_hash[:content][:download_url]
         response.headers["Location"] = downloadURL
@@ -84,15 +80,16 @@ class Pan < Sinatra::Base
 
       file = Time.now.strftime("%Y-%m-%d-%H-%M")
       date = Time.now.strftime("%Y-%m-%d %H:%M")
-      filecontent = "---\nauthor: Martin Hartl\nlayout: status\ndate: #{date}\n---\n#{content}"
+      filecontent = "---\nauthor: #{ENV["AUTHOR_NAME"]}\nlayout: status\ndate: #{date}\n---\n#{content}"
       token = ENV["GITHUB_ACCESS_TOKEN"]
 
       client = Octokit::Client.new(:access_token => token)
-      client.create_contents("hartlco/hartlco-jekyll",
+      client.create_contents(
+        ENV["GITHUB_REPOSITORY_NAME"],
         "contents/_posts/#{file}.md",
         "Adding post",
-        filecontent)
-      
-      print "success"
+        filecontent
+        )
+        "success"
     end  
 end
