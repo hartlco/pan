@@ -11,32 +11,7 @@ require 'base64'
 
 class Pan < Sinatra::Base
     log = Logger.new("#{File.dirname(__FILE__)}/log.log")
-    
-    post '/upload/media' do
-      @filename = params[:file][:filename]
-        file = params[:file][:tempfile]
-
-        data = file.read
-        
-        token = ENV["GITHUB_ACCESS_TOKEN"]
-        path = "#{ENV["IMAGE_PATH"]}/#{@filename}"
-        client = Octokit::Client.new(:access_token => token)
-        commitResource = client.create_contents(
-          ENV["GITHUB_REPOSITORY_NAME"],
-          path,
-          "Adding asset",
-          data
-        )
-
-        downloadURL = commitResource.to_hash[:content][:download_url]
-        response.headers["Location"] = downloadURL
-    end
-
-    get '/micropub/main' do
-      content_type :json
-      { "media-endpoint": ENV["MEDIAENDPOINT_URL"]}.to_json
-    end
-
+   
     def checkAuthorization(token)
       uri = URI('https://tokens.indieauth.com/token')
 
@@ -64,6 +39,38 @@ class Pan < Sinatra::Base
       correctMeURI = decodedBody.assoc('me').last == 'https://hartl.co/'
 
       return correctMeURI
+    end
+
+    post '/upload/media' do
+      headerToken = request.env["HTTP_AUTHORIZATION"]
+      if !checkAuthorization(request.env["HTTP_AUTHORIZATION"])
+        puts headerToken
+        puts "Wrong token"
+        return 401
+      end
+
+      @filename = params[:file][:filename]
+        file = params[:file][:tempfile]
+
+        data = file.read
+        
+        token = ENV["GITHUB_ACCESS_TOKEN"]
+        path = "#{ENV["IMAGE_PATH"]}/#{@filename}"
+        client = Octokit::Client.new(:access_token => token)
+        commitResource = client.create_contents(
+          ENV["GITHUB_REPOSITORY_NAME"],
+          path,
+          "Adding asset",
+          data
+        )
+
+        downloadURL = commitResource.to_hash[:content][:download_url]
+        response.headers["Location"] = downloadURL
+    end
+
+    get '/micropub/main' do
+      content_type :json
+      { "media-endpoint": ENV["MEDIAENDPOINT_URL"]}.to_json
     end
     
     post '/micropub/main' do
